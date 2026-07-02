@@ -26,6 +26,7 @@ CREATE TABLE building_group (
     postal_code VARCHAR(20)
 );
 
+
 CREATE TABLE building (
     building_no INT PRIMARY KEY,
     building_group_no INT,
@@ -37,7 +38,8 @@ CREATE TABLE building (
     postal_code VARCHAR(20),
     FOREIGN KEY (building_group_no) REFERENCES building_group(building_group_no)
 );
-
+ALTER TABLE building
+DROP COLUMN unit_no;
 
 CREATE TABLE school (
     school_no INT PRIMARY KEY,
