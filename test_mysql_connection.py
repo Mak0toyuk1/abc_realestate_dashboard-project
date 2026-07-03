@@ -2,6 +2,8 @@ import pandas as pd
 import mysql.connector
 from mysql.connector import Error
 
+# pd.set_option("display.max_columns", None)
+# pd.set_option("display.width", None)
 
 def main():
     try:
@@ -52,6 +54,18 @@ def main():
             print("\nschool_df:")
             print(school_df.head())
             print(school_df.shape)
+
+            print("building_group_df columns:")
+            print(building_group_df.columns.tolist())
+
+            print("building_df columns:")
+            print(building_df.columns.tolist())
+
+            print("building_unit_daily_df columns:")
+            print(building_unit_daily_df.columns.tolist())
+
+            print("school_df columns:")
+            print(school_df.columns.tolist())
 
             conn.close()
             print("\nConnection closed.")
