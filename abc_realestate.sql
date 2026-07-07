@@ -76,6 +76,46 @@ LIMIT 200;
 SELECT building_no, building_group_no, name, postal_code
 FROM building
 ORDER BY name;
+USE abc_real_estate;
 
+DROP TABLE IF EXISTS building_unit_monthly_aggr;
 
+CREATE TABLE building_unit_monthly_aggr AS
+SELECT
+    building_no,
+    floor,
+    unit_no,
+    bedrooms_no,
+    rental_year,
+    rental_month,
+    ROUND(AVG(listed_price), 2) AS avg_listed_price,
+    ROUND(AVG(actual_rent), 2) AS avg_actual_rent,
+    COUNT(*) AS daily_record_count,
+    SUM(CASE WHEN rented = 'Y' THEN 1 ELSE 0 END) AS rented_days,
+    SUM(CASE WHEN rented = 'N' THEN 1 ELSE 0 END) AS unrented_days
+FROM building_unit_daily
+GROUP BY
+    building_no,
+    floor,
+    unit_no,
+    bedrooms_no,
+    rental_year,
+    rental_month
+ORDER BY
+    building_no,
+    unit_no,
+    rental_year,
+    rental_month;
+    
+SELECT
+    rental_year,
+    rental_month,
+    COUNT(*) AS monthly_unit_rows
+FROM building_unit_monthly_aggr
+GROUP BY rental_year, rental_month
+ORDER BY rental_year, rental_month;
+
+SELECT *
+FROM building_unit_monthly_aggr
+LIMIT 50;
 
