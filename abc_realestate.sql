@@ -72,25 +72,10 @@ WHERE rented = 'N'
 
 LIMIT 200;
 
-SELECT 
-    bg.name AS building_group,
-    b.name AS building_name,
-    bu.building_no,
-    bu.floor,
-    bu.unit_no,
-    bu.bedrooms_no,
-    bu.rental_year,
-    bu.rental_month,
-    bu.rental_day,
-    bu.listed_price,
-    bu.actual_rent,
-    bu.rented
-FROM building_unit_daily bu
-JOIN building b 
-    ON bu.building_no = b.building_no
-JOIN building_group bg 
-    ON b.building_group_no = bg.building_group_no
-WHERE bu.rented = 'Y'
-LIMIT 200;
+
+SELECT building_no, building_group_no, name, postal_code
+FROM building
+ORDER BY name;
+
 
 
