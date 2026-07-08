@@ -111,12 +111,22 @@ else:
     selected_building_no = None
 
 
-bedroom_options = ["All"] + bedrooms_df["bedrooms_no"].astype(str).tolist()
+bedroom_options = ["All", "Studio/Bachelor", "1", "2", "3"]
 
-selected_bedroom = st.sidebar.selectbox(
+selected_bedroom_label = st.sidebar.selectbox(
     "Bedroom No.",
-    bedroom_options
+    bedroom_options,
+    key="bedroom_filter"
 )
+
+if selected_bedroom_label == "Studio/Bachelor":
+    selected_bedroom = 0
+elif selected_bedroom_label == "All":
+    selected_bedroom = "All"
+else:
+    selected_bedroom = int(selected_bedroom_label)
+
+
 
 selected_postal_code = st.sidebar.text_input(
     "Postal Code"
@@ -156,7 +166,7 @@ if selected_building_no is not None:
 
 if selected_bedroom != "All":
     query += " AND bu.bedrooms_no = %s"
-    params.append(int(selected_bedroom))
+    params.append(selected_bedroom)
 
 if selected_postal_code.strip() != "":
     query += " AND b.postal_code LIKE %s"
@@ -218,6 +228,72 @@ else:
     st.plotly_chart(fig, use_container_width=True)
 
     st.dataframe(monthly_rent_df, use_container_width=True)
+# -------------------------
+# Display filtered detail table with postal code
+# -------------------------
 
+detail_query = """
+SELECT 
+    bg.name AS building_group,
+    b.name AS building_name,
+    b.postal_code,
+    bu.floor,
+    bu.unit_no,
+    bu.bedrooms_no,
+    bu.rental_year,
+    bu.rental_month,
+    ROUND(AVG(bu.actual_rent), 2) AS average_rent
+FROM building_unit_daily bu
+JOIN building b
+    ON bu.building_no = b.building_no
+JOIN building_group bg
+    ON b.building_group_no = bg.building_group_no
+WHERE bu.rental_year = %s
+"""
+
+detail_params = [selected_year]
+
+if selected_group_no is not None:
+    detail_query += " AND bg.building_group_no = %s"
+    detail_params.append(selected_group_no)
+
+if selected_building_no is not None:
+    detail_query += " AND b.building_no = %s"
+    detail_params.append(selected_building_no)
+
+if selected_bedroom != "All":
+    detail_query += " AND bu.bedrooms_no = %s"
+    detail_params.append(selected_bedroom)
+
+if selected_postal_code.strip() != "":
+    detail_query += " AND b.postal_code LIKE %s"
+    detail_params.append(f"%{selected_postal_code.strip()}%")
+
+detail_query += """
+GROUP BY 
+    bg.name,
+    b.name,
+    b.postal_code,
+    bu.floor,
+    bu.unit_no,
+    bu.bedrooms_no,
+    bu.rental_year,
+    bu.rental_month
+ORDER BY 
+    b.name,
+    bu.floor,
+    bu.unit_no,
+    bu.rental_month
+LIMIT 100;
+"""
+
+detail_df = pd.read_sql(
+    detail_query,
+    conn,
+    params=detail_params
+)
+
+st.subheader("Filtered Unit-Level Monthly Rent Preview")
+st.dataframe(detail_df, use_container_width=True)
 
 conn.close()
