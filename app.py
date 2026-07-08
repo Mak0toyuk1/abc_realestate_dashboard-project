@@ -137,6 +137,29 @@ selected_year = st.sidebar.selectbox(
     years_df["rental_year"].tolist()
 )
 
+month_options = {
+    "All": None,
+    "January": 1,
+    "February": 2,
+    "March": 3,
+    "April": 4,
+    "May": 5,
+    "June": 6,
+    "July": 7,
+    "August": 8,
+    "September": 9,
+    "October": 10,
+    "November": 11,
+    "December": 12
+}
+
+selected_month_label = st.sidebar.selectbox(
+    "Rental Month",
+    list(month_options.keys()),
+    key="rental_month_filter"
+)
+
+selected_month = month_options[selected_month_label]
 
 # -------------------------
 # Build line chart query dynamically
@@ -171,6 +194,7 @@ if selected_bedroom != "All":
 if selected_postal_code.strip() != "":
     query += " AND b.postal_code LIKE %s"
     params.append(f"%{selected_postal_code.strip()}%")
+
 
 query += """
 GROUP BY bu.rental_month
@@ -268,6 +292,9 @@ if selected_bedroom != "All":
 if selected_postal_code.strip() != "":
     detail_query += " AND b.postal_code LIKE %s"
     detail_params.append(f"%{selected_postal_code.strip()}%")
+if selected_month is not None:
+    detail_query += " AND bu.rental_month = %s"
+    detail_params.append(selected_month)
 
 detail_query += """
 GROUP BY 
