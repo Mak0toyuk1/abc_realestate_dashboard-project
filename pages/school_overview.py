@@ -131,10 +131,13 @@ SELECT
     s.score,
     s.ranking_across_ontario,
     s.building_group_no,
-    bg.name AS building_group_name
+    bg.name AS building_group_name,
+    GROUP_CONCAT(DISTINCT b.name ORDER BY b.name SEPARATOR ', ') AS buildings
 FROM school s
 JOIN building_group bg
     ON s.building_group_no = bg.building_group_no
+LEFT JOIN building b
+    ON bg.building_group_no = b.building_group_no
 WHERE 1 = 1
 """
 
@@ -152,6 +155,18 @@ if selected_school_name != "All":
     school_params.append(selected_school_name)
 
 school_query += """
+GROUP BY
+    s.school_no,
+    s.school_type,
+    s.name,
+    s.country,
+    s.city_region,
+    s.street_line_1,
+    s.street_line_2,
+    s.score,
+    s.ranking_across_ontario,
+    s.building_group_no,
+    bg.name
 ORDER BY s.school_type, s.ranking_across_ontario;
 """
 
@@ -316,7 +331,8 @@ else:
             "score": "Score",
             "ranking_across_ontario": "Ranking Across Ontario",
             "building_group_no": "Building Group No",
-            "building_group_name": "Building Group Name"
+            "building_group_name": "Building Group Name",
+            "buildings": "Buildings"
         }
     )
 
@@ -336,7 +352,8 @@ else:
             "Score",
             "Ranking Across Ontario",
             "Building Group No",
-            "Building Group Name"
+            "Building Group Name",
+            "Buildings"
         ]
     ]
 
