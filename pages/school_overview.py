@@ -39,7 +39,22 @@ building_groups_df = pd.read_sql(
     """,
     conn
 )
-
+buildings_df = pd.read_sql(
+    """
+    SELECT building_no, building_group_no, name
+    FROM building
+    ORDER BY name;
+    """,
+    conn
+)
+schools_filter_df = pd.read_sql(
+    """
+    SELECT DISTINCT name
+    FROM school
+    ORDER BY name;
+    """,
+    conn
+)
 
 # -------------------------
 # Sidebar filters
@@ -65,6 +80,40 @@ if selected_group_name != "All":
 else:
     selected_group_no = None
 
+if selected_group_no is not None:
+    filtered_buildings_df = buildings_df[
+        buildings_df["building_group_no"] == selected_group_no
+    ]
+else:
+    filtered_buildings_df = buildings_df
+
+building_options = ["All"] + filtered_buildings_df["name"].tolist()
+
+selected_building_name = st.sidebar.selectbox(
+    "Building",
+    building_options,
+    key="school_building_filter"
+)
+
+school_options = ["All"] + schools_filter_df["name"].tolist()
+
+selected_school_name = st.sidebar.selectbox(
+    "School",
+    school_options,
+    key="school_name_filter"
+)
+
+if selected_building_name != "All":
+    selected_building_row = filtered_buildings_df.loc[
+        filtered_buildings_df["name"] == selected_building_name
+    ].iloc[0]
+
+    selected_building_no = int(selected_building_row["building_no"])
+    selected_building_group_no = int(selected_building_row["building_group_no"])
+else:
+    selected_building_no = None
+    selected_building_group_no = None
+
 
 # -------------------------
 # Query school data
@@ -72,28 +121,38 @@ else:
 
 school_query = """
 SELECT
-    school_no,
-    school_type,
-    name,
-    country,
-    city_region,
-    street_line_1,
-    street_line_2,
-    score,
-    ranking_across_ontario,
-    building_group_no
-FROM school
+    s.school_no,
+    s.school_type,
+    s.name,
+    s.country,
+    s.city_region,
+    s.street_line_1,
+    s.street_line_2,
+    s.score,
+    s.ranking_across_ontario,
+    s.building_group_no,
+    bg.name AS building_group_name
+FROM school s
+JOIN building_group bg
+    ON s.building_group_no = bg.building_group_no
 WHERE 1 = 1
 """
 
 school_params = []
 
-if selected_group_no is not None:
-    school_query += " AND building_group_no = %s"
+if selected_building_group_no is not None:
+    school_query += " AND s.building_group_no = %s"
+    school_params.append(selected_building_group_no)
+elif selected_group_no is not None:
+    school_query += " AND s.building_group_no = %s"
     school_params.append(selected_group_no)
 
+if selected_school_name != "All":
+    school_query += " AND s.name = %s"
+    school_params.append(selected_school_name)
+
 school_query += """
-ORDER BY school_type, ranking_across_ontario;
+ORDER BY s.school_type, s.ranking_across_ontario;
 """
 
 school_df = pd.read_sql(
@@ -143,7 +202,33 @@ else:
     )
 
     school_chart_df["average_score"] = school_chart_df["average_score"].round(2)
+    
+    best_ranked_school_df = (
+    school_df
+    .sort_values("ranking_across_ontario", ascending=True)
+    .groupby("school_type", as_index=False)
+    .first()
+)
 
+    best_ranked_school_df = best_ranked_school_df[
+        [
+            "school_type",
+            "name",
+            "score",
+            "ranking_across_ontario"
+        ]
+    ].rename(
+        columns={
+            "name": "school_name",
+            "ranking_across_ontario": "best_ranking"
+        }
+    )
+
+    best_ranked_school_df["chart_label"] = (
+        best_ranked_school_df["school_type"]
+        + "<br>"
+        + best_ranked_school_df["school_name"]
+    )
 
     # -------------------------
     # Charts
@@ -169,19 +254,26 @@ else:
 
     with chart_col2:
         fig_rank = px.bar(
-            school_chart_df,
-            x="school_type",
-            y="best_ranking",
-            text="best_ranking",
-            title="Best Ranking by School Type"
-        )
+        best_ranked_school_df,
+        x="chart_label",
+        y="best_ranking",
+        text="best_ranking",
+        title="Best-Ranked School by School Type",
+        hover_data={
+            "school_type": True,
+            "school_name": True,
+            "score": True,
+            "best_ranking": True,
+            "chart_label": False
+        }
+    )
 
-        fig_rank.update_layout(
-            xaxis_title="School Type",
-            yaxis_title="Ranking Across Ontario"
-        )
+    fig_rank.update_layout(
+        xaxis_title="School Type and School Name",
+        yaxis_title="Ranking Across Ontario"
+    )   
 
-        st.plotly_chart(fig_rank, width="stretch")
+    st.plotly_chart(fig_rank, width="stretch")
 
     st.caption("Note: for rankings, a lower number represents a better ranking.")
 
@@ -223,7 +315,8 @@ else:
             "street_line_2": "Street Line 2",
             "score": "Score",
             "ranking_across_ontario": "Ranking Across Ontario",
-            "building_group_no": "Building Group No"
+            "building_group_no": "Building Group No",
+            "building_group_name": "Building Group Name"
         }
     )
 
@@ -242,7 +335,8 @@ else:
             "Address",
             "Score",
             "Ranking Across Ontario",
-            "Building Group No"
+            "Building Group No",
+            "Building Group Name"
         ]
     ]
 
